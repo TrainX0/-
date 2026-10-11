@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0c16">
+<meta name="description" content="Сосед: Побег — 3D стелс-игра в одном файле">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Сосед">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" id="lnkIcon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230a0c16'/%3E%3Cpath d='M10 34 32 16l22 18v20H10z' fill='%231a2038'/%3E%3Crect x='24' y='34' width='12' height='12' fill='%23ffb64d'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" id="lnkApple" href="">
+<link rel="manifest" id="lnkManifest">
+<title>Сосед: Побег — 3D стелс-игра</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#f4ecdc;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;touch-action:none}
+#stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100vw;height:56.25vw;overflow:hidden;background:#05060b}
+#view{position:absolute;inset:0}
+#view canvas{display:block;width:100%;height:100%}
+.hidden{display:none!important}
+#vignette{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(180,20,20,.75) 100%)}
+#hud{position:absolute;inset:0;pointer-events:none;padding:8px 10px}
+#info{display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 150px)}
+.chip{background:rgba(10,12,22,.72);border:1px solid rgba(255,182,77,.35);border-radius:10px;padding:5px 9px;font-size:15px;white-space:nowrap}
+.chip b{color:#ffb64d}
+.chip small{opacity:.6;font-size:11px}
+#bars{margin-top:8px;width:min(230px,40%);background:rgba(10,12,22,.72);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:7px 9px;font-size:12px}
+.bar{height:7px;border-radius:5px;background:rgba(255,255,255,.14);margin:3px 0 6px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:#ffb64d;transition:width .1s}
+#detBar{background:#e0b341}
+#stamBar{background:#58c48a}
+#hbtns{position:absolute;right:10px;top:8px;display:flex;gap:6px;pointer-events:auto}
+.hbtn{width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,182,77,.4);background:rgba(10,12,22,.72);color:#fff;font-size:18px;cursor:pointer}
+#hint{position:absolute;left:0;right:0;bottom:84px;text-align:center;font-size:15px;text-shadow:0 1px 4px #000}
+#hint span{background:rgba(10,12,22,.8);border-radius:10px;padding:6px 12px;border:1px solid rgba(255,182,77,.4)}
+#toast{position:absolute;left:50%;top:16%;transform:translateX(-50%);max-width:88%;text-align:center;background:rgba(10,12,22,.88);border:1px solid #ffb64d;border-radius:12px;padding:10px 16px;font-size:16px;z-index:15;pointer-events:none}
+#touch{position:absolute;inset:0;pointer-events:none;display:none}
+body.touch #touch{display:block}
+#joyZone{position:absolute;left:0;bottom:0;width:48%;height:66%;pointer-events:auto;touch-action:none}
+#joyBase{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);pointer-events:none}
+#joyKnob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,182,77,.7)}
+#tbtns{position:absolute;right:12px;bottom:12px;display:grid;grid-template-columns:repeat(3,58px);gap:8px;pointer-events:auto}
+.tb{width:58px;height:58px;border-radius:50%;border:2px solid rgba(255,182,77,.55);background:rgba(10,12,22,.65);color:#fff;font-size:15px;font-weight:700;touch-action:none}
+.tb.on{background:rgba(255,182,77,.55)}
+.overlay{position:absolute;inset:0;display:flex;background:rgba(6,8,16,.82);z-index:20;padding:12px;overflow:auto}
+.panel{margin:auto;width:100%;max-width:560px;background:#141a2e;border:1px solid #33406b;border-radius:14px;padding:18px 22px}
+.panel h1{margin:0 0 6px;font-size:clamp(24px,5vh,38px);letter-spacing:.5px;color:#ffb64d}
+.panel h2{margin:0 0 8px;font-size:24px;color:#ffb64d}
+.panel p{margin:8px 0;line-height:1.45;font-size:15px;color:#d9d3c4}
+.btn{display:block;width:100%;padding:11px 14px;margin:7px 0;border:0;border-radius:10px;background:#ffb64d;color:#1a1204;font-size:16px;font-weight:700;cursor:pointer;text-align:left}
+.btn.sec{background:#26305a;color:#f4ecdc}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn small{display:block;font-weight:400;opacity:.8;font-size:12px;margin-top:2px}
+.row{display:flex;gap:8px}
+.row .btn{text-align:center}
+details{margin:8px 0;color:#d9d3c4;font-size:14px;line-height:1.5}
+summary{cursor:pointer;color:#ffb64d;font-weight:700}
+details ul{padding-left:18px;margin:6px 0}
+.note{font-size:12px;opacity:.65}
+#error{z-index:60}
+#stage.small .chip{font-size:12px;padding:3px 7px}
+#stage.small #bars{font-size:10px;padding:5px 7px}
+#stage.small .hbtn{width:34px;height:34px;font-size:15px}
+#stage.small .panel{padding:12px 14px}
+#stage.small .panel p,#stage.small details{font-size:12px;margin:5px 0}
+#stage.small .btn{padding:8px 12px;font-size:14px;margin:5px 0}
+#stage.small .tb{width:50px;height:50px;font-size:13px}
+#stage.small #tbtns{grid-template-columns:repeat(3,50px)}
+#stage.small #hint{bottom:70px;font-size:13px}
+#stage.small #toast{font-size:13px;padding:7px 12px}
+#rotate{position:fixed;inset:0;z-index:100;background:#0a0c16;color:#ffb64d;display:flex;align-items:center;justify-content:center;text-align:center;font-size:22px;padding:30px}
+</style>
+</head>
+<body>
+<div id="stage">
+<div id="view"></div>
+<div id="vignette"></div>
+
+<div id="hud" class="hidden">
+  <div id="info">
+    <div class="chip">🔑 <b id="hKeys">0/3</b></div>
+    <div class="chip">⏱ <b id="hTime">0:00</b></div>
+    <div class="chip">🪤 <b id="hTrap">0</b> <small>[F]</small></div>
+    <div class="chip">🍾 <b id="hBot">0</b> <small>[G]</small></div>
+  </div>
+  <div id="bars">
+    Сосед: <b id="hState">спокоен</b>
+    <div class="bar"><i id="detBar"></i></div>
+    Выносливость
+    <div class="bar"><i id="stamBar"></i></div>
+  </div>
+  <div id="hbtns">
+    <button class="hbtn" id="bSound" title="Звук">🔊</button>
+    <button class="hbtn" id="bFull" title="Полный экран">⛶</button>
+    <button class="hbtn" id="bPause" title="Пауза">⏸</button>
+  </div>
+  <div id="hint" class="hidden"><span id="hintTxt"></span></div>
+</div>
+<div id="toast" class="hidden"></div>
+
+<div id="touch" class="hidden">
+  <div id="joyZone"></div>
+  <div id="joyBase" class="hidden"><div id="joyKnob"></div></div>
+  <div id="tbtns">
+    <button class="tb" id="tbSneak">🐢</button>
+    <button class="tb" id="tbBot">🍾</button>
+    <button class="tb" id="tbTrap">🪤</button>
+    <button class="tb" id="tbRun">БЕГ</button>
+    <button class="tb" id="tbAct">✋</button>
+  </div>
+</div>
+
+<div id="boot" class="overlay"><div class="panel">
+  <h2>Загрузка…</h2>
+  <p id="bootMsg">Подключаем 3D-движок Three.js. Для первой загрузки нужен интернет.</p>
+</div></div>
+
+<div id="menu" class="overlay hidden"><div class="panel">
+  <h1>СОСЕД: ПОБЕГ</h1>
+  <p>Ночью вы пробрались в дом подозрительного соседа. Найдите все ключи и выберитесь через входную дверь. Сосед патрулирует комнаты, слышит шум и замечает вас в конусе своего взгляда.</p>
+  <div id="levelList"></div>
+  <details>
+    <summary>Как играть</summary>
+    <ul>
+      <li><b>ПК:</b> WASD или стрелки — ходьба, Shift — бег (шумно), C — красться (тихо), E — спрятаться в шкафу / выйти, F — поставить капкан, G — бросить бутылку (отвлечь соседа), Esc — пауза.</li>
+      <li><b>Телефон:</b> палец в левой части экрана — джойстик, кнопки справа: ✋ шкаф, 🪤 капкан, 🍾 бутылка, 🐢 красться, БЕГ — удерживать.</li>
+      <li>Жёлтый конус — поле зрения соседа. Чем ближе вы и чем быстрее бежите, тем быстрее шкала подозрения заполнится.</li>
+      <li>Капкан оглушает соседа на 5 секунд. Брошенная бутылка разбивается и отвлекает его.</li>
+      <li>Не прячьтесь там, где он вас только что видел — он проверит шкаф.</li>
+    </ul>
+  </details>
+  <div class="row">
+    <button class="btn sec" id="mSound">🔊 Звук</button>
+    <button class="btn sec" id="mFull">⛶ Полный экран</button>
+  </div>
+  <button class="btn sec hidden" id="mInstall">⬇ Установить как приложение</button>
+  <p class="note">Формат кадра 16:9. Весь игровой код — в этом одном файле. Three.js подгружается с CDN, поэтому при первом запуске нужен интернет. Прогресс сохраняется в браузере. На iPhone: «Поделиться» → «На экран Домой».</p>
+</div></div>
+
+<div id="pause" class="overlay hidden"><div class="panel">
+  <h2>Пауза</h2>
+  <button class="btn" id="pResume">Продолжить</button>
+  <button class="btn sec" id="pRestart">Начать уровень заново</button>
+  <button class="btn sec" id="pFull">Полный экран</button>
+  <button class="btn sec" id="pMenu">В главное меню</button>
+</div></div>
+
+<div id="end" class="overlay hidden"><div class="panel">
+  <h2 id="endTitle"></h2>
+  <p id="endText"></p>
+  <button class="btn" id="eMain"></button>
+  <button class="btn sec" id="eRetry">Играть уровень заново</button>
+  <button class="btn sec" id="eMenu">В главное меню</button>
+</div></div>
+
+<div id="error" class="overlay hidden"><div class="panel">
+  <h2>Что-то пошло не так</h2>
+  <p id="errorMsg"></p>
+  <button class="btn" onclick="location.reload()">Перезагрузить страницу</button>
+</div></div>
+
+</div>
+<div id="rotate" class="hidden">Поверните телефон горизонтально 📱</div>
+<script>
+(function () {
+'use strict';
+
+/* ================= БАЗА: DOM, ошибки, сохранение ================= */
+const $ = id => document.getElementById(id);
+const isTouch = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || ('ontouchstart' in window);
+if (isTouch) document.body.classList.add('touch');
+
+function showError(msg) {
+  $('errorMsg').textContent = msg;
+  $('error').classList.remove('hidden');
+}
+window.addEventListener('error', e => { showError('Ошибка: ' + (e.message || 'неизвестная ошибка')); });
+window.addEventListener('unhandledrejection', e => { showError('Ошибка: ' + (e.reason && e.reason.message || e.reason)); });
+
+const SAVE_KEY = 'sosed_escape_v1';
+const save = { unlocked: 1, best: {}, muted: false };
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (s && typeof s === 'object') {
+      save.unlocked = Math.max(1, Math.min(2, (s.unlocked | 0) || 1));
+      save.best = (s.best && typeof s.best === 'object') ? s.best : {};
+      save.muted = !!s.muted;
+    }
+  } catch (e) { /* localStorage может быть недоступен */ }
+}
+function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+loadSave();
+
+/* ================= 16:9 И PWA ================= */
+function layoutStage() {
+  const W = window.innerWidth, H = window.innerHeight;
+  let w = W, h = W * 9 / 16;
+  if (h > H) { h = H; w = H * 16 / 9; }
+  const st = $('stage');
+  st.style.width = w + 'px'; st.style.height = h + 'px';
+  st.classList.toggle('small', h < 480);
+  $('rotate').classList.toggle('hidden', !(isTouch && H > W));
+  return { w: w, h: h };
+}
+layoutStage();
+window.addEventListener('resize', layoutStage);
+
+function drawIcon(g, s) {
+  const k = s / 512;
+  g.save(); g.scale(k, k);
+  const sky = g.createLinearGradient(0, 0, 0, 512); sky.addColorStop(0, '#16224a'); sky.addColorStop(1, '#05070f');
+  g.fillStyle = sky; g.fillRect(0, 0, 512, 512);
+  g.fillStyle = 'rgba(255,255,255,.8)';
+  [[70, 70], [160, 40], [250, 90], [60, 190], [440, 200], [330, 50]].forEach(p => { g.beginPath(); g.arc(p[0], p[1], 2.5, 0, 7); g.fill(); });
+  const mg = g.createRadialGradient(390, 118, 10, 390, 118, 90); mg.addColorStop(0, 'rgba(230,236,255,.5)'); mg.addColorStop(1, 'rgba(230,236,255,0)');
+  g.fillStyle = mg; g.beginPath(); g.arc(390, 118, 90, 0, 7); g.fill();
+  g.fillStyle = '#e8ecff'; g.beginPath(); g.arc(390, 118, 40, 0, 7); g.fill();
+  g.fillStyle = '#070912'; g.fillRect(0, 430, 512, 82);
+  g.fillStyle = '#0d1226'; g.strokeStyle = '#2a3866'; g.lineWidth = 4;
+  g.fillRect(140, 250, 236, 182); g.strokeRect(140, 250, 236, 182);
+  g.beginPath(); g.moveTo(112, 258); g.lineTo(256, 150); g.lineTo(400, 258); g.closePath(); g.fill(); g.stroke();
+  g.fillRect(320, 170, 36, 60);
+  const wg = g.createRadialGradient(222, 335, 10, 222, 335, 120); wg.addColorStop(0, 'rgba(255,182,77,.55)'); wg.addColorStop(1, 'rgba(255,182,77,0)');
+  g.fillStyle = wg; g.fillRect(100, 220, 250, 230);
+  g.fillStyle = '#ffb64d'; g.fillRect(186, 296, 72, 78);
+  g.fillStyle = '#1a0f05'; g.beginPath(); g.arc(222, 330, 13, 0, 7); g.fill();
+  g.beginPath(); g.moveTo(197, 374); g.lineTo(200, 350); g.quadraticCurveTo(222, 340, 244, 350); g.lineTo(247, 374); g.closePath(); g.fill();
+  g.strokeStyle = '#2a1a08'; g.lineWidth = 5; g.strokeRect(186, 296, 72, 78);
+  g.beginPath(); g.moveTo(222, 296); g.lineTo(222, 374); g.stroke();
+  g.fillStyle = '#1a2038'; g.fillRect(296, 340, 50, 92);
+  g.fillStyle = '#ffb64d'; g.beginPath(); g.arc(336, 388, 4, 0, 7); g.fill();
+  const bg = g.createLinearGradient(80, 450, 200, 420); bg.addColorStop(0, 'rgba(255,240,180,.55)'); bg.addColorStop(1, 'rgba(255,240,180,0)');
+  g.fillStyle = bg; g.beginPath(); g.moveTo(80, 462); g.lineTo(190, 400); g.lineTo(190, 470); g.closePath(); g.fill();
+  g.restore();
+}
+function mkIcon(size) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  drawIcon(c.getContext('2d'), size);
+  return c.toDataURL('image/png');
+}
+let deferredInstall = null;
+function setupPWA() {
+  try {
+    const i192 = mkIcon(192), i512 = mkIcon(512);
+    $('lnkIcon').href = i192; $('lnkApple').href = mkIcon(180);
+    const manifest = {
+      name: 'Сосед: Побег', short_name: 'Сосед', description: '3D стелс-игра: проберитесь в дом соседа и найдите ключи',
+      start_url: location.href.split('#')[0], display: 'fullscreen', display_override: ['fullscreen', 'standalone'],
+      orientation: 'landscape', background_color: '#0a0c16', theme_color: '#0a0c16', lang: 'ru',
+      icons: [
+        { src: i192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: i512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: i512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+      ]
+    };
+    $('lnkManifest').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' }));
+  } catch (e) { /* иконка и манифест необязательны для игры */ }
+  // Офлайн-кеш работает, если рядом лежит sw.js и страница открыта по https
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; $('mInstall').classList.remove('hidden'); });
+  $('mInstall').onclick = () => { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; $('mInstall').classList.add('hidden'); } };
+  window.addEventListener('appinstalled', () => $('mInstall').classList.add('hidden'));
+}
+setupPWA();
+
+/* ================= ЗВУК (Web Audio, процедурный) ================= */
+let actx = null, master = null, noiseBuf = null;
+function initAudio() {
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    actx = new AC();
+    master = actx.createGain();
+    master.gain.value = save.muted ? 0 : 0.5;
+    master.connect(actx.destination);
+    const hum = actx.createOscillator(), hg = actx.createGain();
+    hum.type = 'sine'; hum.frequency.value = 52; hg.gain.value = 0.022;
+    hum.connect(hg); hg.connect(master); hum.start();
+  } catch (e) { actx = null; }
+}
+function setMuted(m) {
+  save.muted = m; writeSave();
+  if (master) master.gain.value = m ? 0 : 0.5;
+  const t = m ? '🔇' : '🔊';
+  $('bSound').textContent = t;
+  $('mSound').textContent = t + ' Звук';
+}
+function tone(freq, dur, type, vol, slide, delay) {
+  if (!actx) return;
+  const t = actx.currentTime + (delay || 0);
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t + dur);
+  g.gain.setValueAtTime(vol || 0.2, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+function noise(dur, vol, freq, delay) {
+  if (!actx) return;
+  if (!noiseBuf) {
+    noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const t = actx.currentTime + (delay || 0);
+  const s = actx.createBufferSource(); s.buffer = noiseBuf;
+  const f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq || 1200;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(vol || 0.2, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  s.connect(f); f.connect(g); g.connect(master);
+  s.start(t); s.stop(t + dur + 0.03);
+}
+const SFX = {
+  click() { tone(520, .05, 'square', .07); },
+  step() { noise(.06, .07, 450); },
+  pickup() { tone(660, .12, 'square', .1); tone(990, .16, 'square', .1, 0, .08); },
+  alert() { tone(190, .55, 'sawtooth', .16, -70); tone(250, .55, 'sawtooth', .1, -90, .05); },
+  trap() { noise(.3, .35, 2500); tone(130, .3, 'square', .22, -70); },
+  shatter() { noise(.4, .3, 6000); tone(1300, .1, 'triangle', .08); tone(900, .12, 'triangle', .06, 0, .06); },
+  throwIt() { noise(.12, .1, 900); },
+  hide() { tone(220, .1, 'sine', .14); tone(160, .12, 'sine', .12, 0, .08); },
+  door() { tone(110, .6, 'sawtooth', .12, 60); noise(.5, .1, 700); },
+  caught() { tone(300, .3, 'sawtooth', .22, -200); tone(150, .6, 'square', .2, -100, .2); },
+  win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, 'triangle', .16, 0, i * .13)); }
+};
+
+function stepSound(type, vol) {
+  if (type === 'tile') { noise(.05, vol * .9, 3500); tone(900, .03, 'square', vol * .12); }
+  else if (type === 'carpet') { noise(.1, vol * .4, 350); }
+  else if (type === 'stone') { noise(.07, vol * .9, 2200); tone(160, .06, 'sine', vol * .3); }
+  else { noise(.07, vol * .8, 900); tone(95, .07, 'sine', vol * .4); if (Math.random() < .1) tone(220 + Math.random() * 60, .25, 'sawtooth', vol * .1, -60); }
+}
+
+/* ================= ДАННЫЕ УРОВНЕЙ ================= */
+const VIS_RANGE = 9, HALF = 0.66;
+const LEVELS = [
+  {
+    name: 'Дом соседа', sub: 'Три ключа, пять комнат', W: 22, H: 14, speed: 1.0,
+    rooms: [
+      { x: 1, y: 1, w: 6, h: 5, floor: 'wood', rug: [3, 3, 3, 2, 0x2f4f7a] },
+      { x: 8, y: 1, w: 6, h: 5, floor: 'tile' },
+      { x: 15, y: 1, w: 6, h: 5, floor: 'carpet' },
+      { x: 1, y: 7, w: 10, h: 6, floor: 'stone' },
+      { x: 12, y: 7, w: 9, h: 6, floor: 'wood', rug: [15, 9, 3, 2, 0x6b2f2f] }
+    ],
+    doors: [[7, 3], [14, 3], [3, 6], [10, 6], [17, 6], [11, 9]],
+    exit: [21, 10],
+    furn: [
+      { t: 'bed', x: 1, y: 1, w: 2, d: 3 }, { t: 'nightstand', x: 3, y: 1, w: 1, d: 1 },
+      { t: 'wardrobe', x: 6, y: 1, w: 1, d: 1, ex: 6, ey: 2 },
+      { t: 'counter', x: 8, y: 1, w: 4, d: 1 }, { t: 'fridge', x: 13, y: 1, w: 1, d: 1 },
+      { t: 'table', x: 10, y: 3, w: 2, d: 2 },
+      { t: 'tv', x: 16, y: 1, w: 3, d: 1 }, { t: 'couch', x: 16, y: 4, w: 3, d: 1 },
+      { t: 'shelf', x: 20, y: 2, w: 1, d: 2 }, { t: 'wardrobe', x: 15, y: 1, w: 1, d: 1, ex: 15, ey: 2 },
+      { t: 'table', x: 4, y: 9, w: 3, d: 1 }, { t: 'crate', x: 8, y: 11, w: 2, d: 2, h: 1 },
+      { t: 'shelf', x: 1, y: 12, w: 3, d: 1, h: 1.4 }, { t: 'wardrobe', x: 10, y: 12, w: 1, d: 1, ex: 10, ey: 11 },
+      { t: 'desk', x: 14, y: 8, w: 2, d: 1 }, { t: 'shelf', x: 12, y: 12, w: 4, d: 1 },
+      { t: 'armchair', x: 18, y: 9, w: 1, d: 1 }, { t: 'crate', x: 19, y: 11, w: 2, d: 2, h: .9 }
+    ],
+    keys: [[12.5, 4.5], [2.5, 11.5], [19.5, 1.5]],
+    traps: [[9.5, 4.5], [13.5, 10.5]],
+    bottles: [[4.5, 1.5], [6.5, 11.5], [19.5, 4.5]],
+    start: [4.5, 4.5], nstart: [17.5, 3.5],
+    wps: [[17.5, 3.5], [12.5, 2.5], [3.5, 3.5], [5.5, 10.5], [16.5, 9.5]]
+  },
+  {
+    name: 'Большой особняк', sub: 'Четыре ключа, шесть комнат, сосед быстрее', W: 26, H: 16, speed: 1.15,
+    rooms: [
+      { x: 1, y: 1, w: 6, h: 5, floor: 'wood', rug: [3, 3, 3, 2, 0x2f4f7a] },
+      { x: 8, y: 1, w: 7, h: 5, floor: 'tile' },
+      { x: 16, y: 1, w: 9, h: 5, floor: 'carpet', rug: [18, 2, 4, 2, 0x40305a] },
+      { x: 1, y: 7, w: 7, h: 8, floor: 'stone' },
+      { x: 9, y: 7, w: 6, h: 8, floor: 'wood' },
+      { x: 16, y: 7, w: 9, h: 8, floor: 'carpet', rug: [19, 11, 4, 2, 0x6b2f2f] }
+    ],
+    doors: [[7, 3], [15, 3], [3, 6], [11, 6], [20, 6], [8, 10], [15, 10]],
+    exit: [25, 12],
+    furn: [
+      { t: 'bed', x: 1, y: 1, w: 2, d: 3 }, { t: 'desk', x: 4, y: 1, w: 2, d: 1 },
+      { t: 'wardrobe', x: 6, y: 1, w: 1, d: 1, ex: 6, ey: 2 },
+      { t: 'shelf', x: 8, y: 1, w: 1, d: 2 }, { t: 'fridge', x: 14, y: 1, w: 1, d: 1 },
+      { t: 'table', x: 10, y: 2, w: 4, d: 2 },
+      { t: 'tv', x: 17, y: 1, w: 3, d: 1 }, { t: 'couch', x: 17, y: 4, w: 3, d: 1 },
+      { t: 'shelf', x: 24, y: 1, w: 1, d: 3 }, { t: 'crate', x: 22, y: 3, w: 2, d: 2, h: .9 },
+      { t: 'wardrobe', x: 16, y: 1, w: 1, d: 1, ex: 16, ey: 2 },
+      { t: 'shelf', x: 1, y: 14, w: 4, d: 1, h: 1.6 }, { t: 'table', x: 3, y: 9, w: 2, d: 2 },
+      { t: 'crate', x: 6, y: 12, w: 2, d: 2, h: 1 }, { t: 'wardrobe', x: 1, y: 7, w: 1, d: 1, ex: 1, ey: 8 },
+      { t: 'crate', x: 10, y: 9, w: 1, d: 1 }, { t: 'crate', x: 13, y: 9, w: 1, d: 1 },
+      { t: 'shelf', x: 9, y: 14, w: 3, d: 1 }, { t: 'machine', x: 12, y: 12, w: 2, d: 2 },
+      { t: 'wardrobe', x: 14, y: 14, w: 1, d: 1, ex: 14, ey: 13 },
+      { t: 'crate', x: 19, y: 9, w: 2, d: 2, h: .9 }, { t: 'couch', x: 22, y: 13, w: 3, d: 1 },
+      { t: 'shelf', x: 16, y: 14, w: 4, d: 1 }, { t: 'table', x: 22, y: 8, w: 2, d: 1 },
+      { t: 'wardrobe', x: 24, y: 7, w: 1, d: 1, ex: 24, ey: 8 }
+    ],
+    keys: [[13.5, 4.5], [22.5, 1.5], [1.5, 12.5], [17.5, 12.5]],
+    traps: [[9.5, 4.5], [5.5, 8.5], [23.5, 10.5]],
+    bottles: [[5.5, 4.5], [21.5, 4.5], [10.5, 12.5]],
+    start: [3.5, 4.5], nstart: [18.5, 2.5],
+    wps: [[18.5, 2.5], [11.5, 4.5], [3.5, 3.5], [5.5, 11.5], [11.5, 11.5], [21.5, 11.5]]
+  }
+];
+
+/* ================= ЗАГРУЗКА THREE.JS ================= */
+const THREE_URLS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+  'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js'
+];
+function loadThree(i, ok, fail) {
+  if (i >= THREE_URLS.length) return fail();
+  const s = document.createElement('script');
+  let done = false;
+  const next = () => { if (done) return; done = true; clearTimeout(to); s.remove(); loadThree(i + 1, ok, fail); };
+  const to = setTimeout(next, 10000);
+  s.onload = () => { if (done) return; if (window.THREE) { done = true; clearTimeout(to); ok(); } else next(); };
+  s.onerror = next;
+  s.src = THREE_URLS[i];
+  document.head.appendChild(s);
+}
+loadThree(0, () => {
+  try { startGame(); $('boot').classList.add('hidden'); }
+  catch (e) { console.error(e); $('boot').classList.add('hidden'); showError('Не удалось запустить игру: ' + e.message + (e.message && /webgl/i.test(e.message) ? '' : ' Проверьте, что в браузере включён WebGL.')); }
+}, () => {
+  $('boot').classList.add('hidden');
+  showError('Не удалось загрузить 3D-библиотеку Three.js. При первом запуске нужен интернет. Проверьте подключение и перезагрузите страницу.');
+});
+
+/* ================= ИГРА ================= */
+function startGame() {
+  const THREE = window.THREE;
+  const PI = Math.PI;
+  const angDiff = (a, b) => ((b - a + PI) % (2 * PI) + 2 * PI) % (2 * PI) - PI;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  /* ---------- рендерер, сцена ---------- */
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: !isTouch, powerPreference: 'high-performance' });
+  } catch (e) { throw new Error('WebGL недоступен в этом браузере.'); }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.95; // яркость картинки: поднимите, если слишком темно
+  $('view').appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x080a14);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 120);
+  scene.fog = new THREE.FogExp2(0x080a14, 0.02);
+  scene.add(new THREE.HemisphereLight(0x8c9ad6, 0x3a2a30, 0.42));
+  const sun = new THREE.DirectionalLight(0xb8c4ff, 0.3);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
+  const sc = sun.shadow.camera; sc.left = -17; sc.right = 17; sc.top = 17; sc.bottom = -17; sc.near = 1; sc.far = 50;
+  sun.shadow.bias = -0.0006;
+  scene.add(sun); scene.add(sun.target);
+  const world = new THREE.Group(); scene.add(world);
+
+  function resize() {
+    const sz = layoutStage();
+    renderer.setSize(sz.w, sz.h, false);
+    camera.aspect = 16 / 9; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+  resize();
+
+  /* ---------- общие геометрии и материалы ---------- */
+  const BOX = new THREE.BoxGeometry(1, 1, 1);
+  const SPH = new THREE.SphereGeometry(1, 16, 12);
+  const CYL = new THREE.CylinderGeometry(1, 1, 1, 16);
+  const TORUS = new THREE.TorusGeometry(0.14, 0.05, 8, 16);
+  const CONE = new THREE.ConeGeometry(0.05, 0.18, 6);
+  const RING = new THREE.RingGeometry(0.3, 0.42, 24);
+  const SHARED = new Set([BOX, SPH, CYL, TORUS, CONE, RING]);
+  const MATS = {};
+  function mat(color, opts) {
+    const k = color + JSON.stringify(opts || {});
+    if (!MATS[k]) MATS[k] = new THREE.MeshStandardMaterial(Object.assign({ color: color, roughness: 0.82, metalness: 0.05 }, opts || {}));
+    return MATS[k];
+  }
+  function box(w, h, d, m, x, y, z, parent, shadow) {
+    const o = new THREE.Mesh(BOX, m);
+    o.scale.set(w, h, d); o.position.set(x, y, z);
+    o.castShadow = shadow !== false; o.receiveShadow = true;
+    parent.add(o); return o;
+  }
+  function sph(r, m, x, y, z, parent) {
+    const o = new THREE.Mesh(SPH, m);
+    o.scale.set(r, r, r); o.position.set(x, y, z);
+    o.castShadow = true; parent.add(o); return o;
+  }
+  function cyl(rx, h, rz, m, x, y, z, parent) {
+    const o = new THREE.Mesh(CYL, m);
+    o.scale.set(rx, h, rz); o.position.set(x, y, z);
+    o.castShadow = true; parent.add(o); return o;
+  }
+
+  /* ---------- процедурные текстуры ---------- */
+  function ctex(size, draw) {
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const g = c.getContext('2d'); draw(g, size);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+    t.encoding = THREE.sRGBEncoding; t.userData.canvas = c;
+    return t;
+  }
+  function bumpFrom(tex) {
+    const src = tex.userData.canvas, sz = src.width;
+    const c = document.createElement('canvas'); c.width = c.height = sz;
+    const g = c.getContext('2d'); g.drawImage(src, 0, 0);
+    const im = g.getImageData(0, 0, sz, sz), a = im.data;
+    for (let i = 0; i < a.length; i += 4) { const l = 0.3 * a[i] + 0.59 * a[i + 1] + 0.11 * a[i + 2]; a[i] = a[i + 1] = a[i + 2] = l; }
+    g.putImageData(im, 0, 0);
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+    return t;
+  }
+  const TEX = {
+    wood: ctex(128, (g, s) => {
+      for (let i = 0; i < 4; i++) {
+        g.fillStyle = 'hsl(' + (26 + Math.random() * 6) + ',' + (38 + Math.random() * 10) + '%,' + (30 + Math.random() * 10) + '%)';
+        g.fillRect(0, i * s / 4, s, s / 4);
+        g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(0, i * s / 4, s, 2);
+        for (let k = 0; k < 7; k++) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(Math.random() * s, i * s / 4 + 4 + Math.random() * (s / 4 - 8), 20 + Math.random() * 40, 1); }
+      }
+    }),
+    tile: ctex(128, (g, s) => {
+      g.fillStyle = '#d3d0c6'; g.fillRect(0, 0, s, s);
+      g.fillStyle = '#7e8a94'; g.fillRect(0, 0, s / 2, s / 2); g.fillRect(s / 2, s / 2, s / 2, s / 2);
+      g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 2; g.strokeRect(0, 0, s / 2, s / 2); g.strokeRect(s / 2, 0, s / 2, s / 2); g.strokeRect(0, s / 2, s / 2, s / 2); g.strokeRect(s / 2, s / 2, s / 2, s / 2);
+    }),
+    carpet: ctex(64, (g, s) => {
+      g.fillStyle = '#5c3a4e'; g.fillRect(0, 0, s, s);
+      for (let i = 0; i < 260; i++) { g.fillStyle = 'rgba(' + (i % 2 ? '255,255,255' : '0,0,0') + ',.07)'; g.fillRect(Math.random() * s, Math.random() * s, 2, 2); }
+    }),
+    stone: ctex(128, (g, s) => {
+      g.fillStyle = '#4f555c'; g.fillRect(0, 0, s, s);
+      for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(' + (Math.random() > .5 ? '255,255,255' : '0,0,0') + ',.06)'; g.fillRect(Math.random() * s, Math.random() * s, 10 + Math.random() * 24, 10 + Math.random() * 24); }
+      g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 2; g.strokeRect(0, 0, s, s); g.beginPath(); g.moveTo(0, s / 2); g.lineTo(s, s / 2); g.moveTo(s / 2, 0); g.lineTo(s / 2, s / 2); g.moveTo(s / 4, s / 2); g.lineTo(s / 4, s); g.moveTo(s * .75, s / 2); g.lineTo(s * .75, s); g.stroke();
+    }),
+    wall: ctex(128, (g, s) => {
+      g.fillStyle = '#6f5f86'; g.fillRect(0, 0, s, s);
+      for (let x = 0; x < s; x += 16) { g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(x, 0, 8, s); }
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, s * .72, s, s * .28);
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, s * .72, s, 3);
+    })
+  };
+  const FLOOR_MATS = {};
+  Object.keys(TEX).forEach(k => { FLOOR_MATS[k] = new THREE.MeshStandardMaterial({ map: TEX[k], bumpMap: bumpFrom(TEX[k]), bumpScale: k === 'carpet' ? 0.5 : 1.1, roughness: k === 'tile' ? .38 : k === 'wood' ? .7 : .92, metalness: 0 }); });
+  const WALL_MAT = new THREE.MeshStandardMaterial({ map: TEX.wall, bumpMap: bumpFrom(TEX.wall), bumpScale: 0.8, roughness: .95 });
+  const CAP_MAT = new THREE.MeshStandardMaterial({ color: 0x1c1626, roughness: 1 });
+
+  function markTex(txt, col) {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.font = 'bold 54px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 7; g.strokeStyle = '#000'; g.strokeText(txt, 32, 34);
+    g.fillStyle = col; g.fillText(txt, 32, 34);
+    return new THREE.CanvasTexture(c);
+  }
+  const SPR_EXCL = new THREE.SpriteMaterial({ map: markTex('!', '#ff4a3d'), depthTest: false, transparent: true });
+  const SPR_Q = new THREE.SpriteMaterial({ map: markTex('?', '#ffd54a'), depthTest: false, transparent: true });
+
+  /* ---------- состояние ---------- */
+  const G = { state: 'menu', level: 1, t: 0, keys: 0, traps: 0, bottles: 0, failed: false, exitOpen: false, menuAngle: 0, hb: 0, creak: 8 };
+  let L = LEVELS[0], grid = null, GW = 0, GH = 0;
+  let items = [], wardrobes = [], placedTraps = [], proj = null;
+  let exitDoor = null, exitLight = null, exitLamp = null;
+  let P = null, N = null, coneGeo = null, coneMesh = null, noiseRing = null, stars = null;
+  let floorType = [], dust = null;
+  const DN = 140;
+  const CONE_N = 28;
+  const held = {};
+  const joy = { x: 0, y: 0, id: null, ox: 0, oy: 0 };
+  let touchRun = false;
+  const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
+
+  /* ---------- сетка и столкновения ---------- */
+  const inb = (x, y) => x >= 0 && y >= 0 && x < GW && y < GH;
+  const isSolid = (x, y) => !inb(x, y) || grid[y * GW + x] !== 0;
+  const isWall = (x, y) => !inb(x, y) || grid[y * GW + x] === 1 || grid[y * GW + x] === 3;
+  function circleHit(x, y, r) {
+    const x0 = Math.floor(x - r), x1 = Math.floor(x + r), y0 = Math.floor(y - r), y1 = Math.floor(y + r);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+      if (!isSolid(tx, ty)) continue;
+      const cx = Math.max(tx, Math.min(x, tx + 1)), cy = Math.max(ty, Math.min(y, ty + 1));
+      const dx = x - cx, dy = y - cy;
+      if (dx * dx + dy * dy < r * r) return true;
+    }
+    return false;
+  }
+  function hasLOS(ax, ay, bx, by) {
+    const d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / 0.2);
+    for (let i = 1; i < n; i++) {
+      const x = ax + (bx - ax) * i / n, y = ay + (by - ay) * i / n;
+      if (isWall(Math.floor(x), Math.floor(y))) return false;
+    }
+    return true;
+  }
+  function directFree(ax, ay, bx, by, r) {
+    const d = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.ceil(d / 0.25));
+    for (let i = 1; i <= n; i++) if (circleHit(ax + (bx - ax) * i / n, ay + (by - ay) * i / n, r)) return false;
+    return true;
+  }
+  function castRay(x, y, dx, dz, range) {
+    for (let d = 0.2; d < range; d += 0.15) if (isWall(Math.floor(x + dx * d), Math.floor(y + dz * d))) return Math.max(0.1, d - 0.05);
+    return range;
+  }
+  function findPath(sx, sy, tx, ty) {
+    let s = [Math.floor(sx), Math.floor(sy)], t = [Math.floor(tx), Math.floor(ty)];
+    if (isSolid(t[0], t[1])) {
+      let best = null, bd = 1e9;
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+        const nx = t[0] + ox, ny = t[1] + oy;
+        if (isSolid(nx, ny)) continue;
+        const d = Math.hypot(nx + .5 - tx, ny + .5 - ty);
+        if (d < bd) { bd = d; best = [nx, ny]; }
+      }
+      if (!best) return [];
+      t = best;
+    }
+    if (isSolid(s[0], s[1])) return [];
+    const start = s[1] * GW + s[0], goal = t[1] * GW + t[0];
+    if (start === goal) return [];
+    const prev = new Int32Array(GW * GH).fill(-2);
+    prev[start] = -1;
+    const q = [start]; let qi = 0, found = false;
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    while (qi < q.length) {
+      const c = q[qi++]; if (c === goal) { found = true; break; }
+      const cx = c % GW, cy = (c - cx) / GW;
+      for (let k = 0; k < 4; k++) {
+        const nx = cx + dirs[k][0], ny = cy + dirs[k][1];
+        if (isSolid(nx, ny)) continue;
+        const ni = ny * GW + nx;
+        if (prev[ni] !== -2) continue;
+        prev[ni] = c; q.push(ni);
+      }
+    }
+    if (!found) return [];
+    const path = [];
+    for (let c = goal; c !== start; c = prev[c]) path.push({ x: (c % GW) + 0.5, y: Math.floor(c / GW) + 0.5 });
+    return path.reverse();
+  }
+
+  /* ---------- персонажи ---------- */
+  const CLOTH = {};
+  function cloth(kind) {
+    if (CLOTH[kind]) return CLOTH[kind];
+    const t = ctex(64, (g, sz) => {
+      if (kind === 'plaid') {
+        g.fillStyle = '#8f2f29'; g.fillRect(0, 0, sz, sz);
+        g.fillStyle = 'rgba(20,10,10,.55)';
+        for (let i = 0; i < sz; i += 16) { g.fillRect(i, 0, 5, sz); g.fillRect(0, i, sz, 5); }
+        g.fillStyle = 'rgba(255,220,180,.18)';
+        for (let i = 8; i < sz; i += 16) { g.fillRect(i, 0, 2, sz); g.fillRect(0, i, sz, 2); }
+      } else {
+        const base = { denim: '#2d3f5c', jacket: '#3b4a3a', khaki: '#5f5a4a' }[kind] || '#555';
+        g.fillStyle = base; g.fillRect(0, 0, sz, sz);
+        for (let i = 0; i < 600; i++) { g.fillStyle = 'rgba(' + (i % 2 ? '255,255,255' : '0,0,0') + ',.07)'; g.fillRect(Math.random() * sz, Math.random() * sz, 1, 3); }
+      }
+    });
+    return (CLOTH[kind] = new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 }));
+  }
+  function makeChar(o) {
+    const g = new THREE.Group();
+    const skin = mat(o.skin, { roughness: 0.55 }), shirtM = cloth(o.shirt), pantsM = cloth(o.pants);
+    const shoeM = mat(0x15120f, { roughness: 0.5 }), dark = mat(0x0e0e0e), white = mat(0xf2efe8), sc = o.build || 1;
+    const body = cyl(0.2 * sc, 0.6, 0.13 * sc, shirtM, 0, 1.02, 0, g);
+    sph(1, shirtM, 0, 0.72, 0, g).scale.set(0.2 * sc, 0.12, 0.14 * sc);
+    sph(1, shirtM, 0, 1.27, 0, g).scale.set(0.21 * sc, 0.12, 0.14 * sc);
+    if (o.belly) sph(1, shirtM, 0, 0.95, 0.06, g).scale.set(0.25, 0.2, 0.19);
+    sph(0.09, shirtM, -0.25 * sc, 1.3, 0, g); sph(0.09, shirtM, 0.25 * sc, 1.3, 0, g);
+    cyl(0.055, 0.1, 0.055, skin, 0, 1.41, 0, g);
+    const head = sph(1, skin, 0, 1.54, 0, g); head.scale.set(0.105, 0.13, 0.115);
+    sph(0.018, skin, 0, 1.52, 0.118, g);
+    sph(0.022, skin, -0.105, 1.54, 0, g); sph(0.022, skin, 0.105, 1.54, 0, g);
+    sph(0.017, white, -0.04, 1.56, 0.105, g); sph(0.017, white, 0.04, 1.56, 0.105, g);
+    sph(0.009, dark, -0.04, 1.56, 0.12, g); sph(0.009, dark, 0.04, 1.56, 0.12, g);
+    if (o.hair) {
+      const hm = mat(o.hair, { roughness: 0.9 });
+      sph(1, hm, 0, 1.62, -0.01, g).scale.set(0.11, 0.075, 0.12);
+      sph(0.1, hm, 0, 1.56, -0.045, g);
+    }
+    if (o.neighbor) {
+      const gr = mat(0x8a8a8a, { roughness: 0.95 });
+      sph(0.035, gr, -0.1, 1.57, -0.01, g); sph(0.035, gr, 0.1, 1.57, -0.01, g); sph(0.04, gr, 0, 1.6, -0.07, g);
+      box(0.1, 0.03, 0.04, mat(0x4a4036), 0, 1.485, 0.12, g);
+      const e1 = box(0.07, 0.016, 0.02, dark, -0.04, 1.6, 0.115, g); e1.rotation.z = -0.4;
+      const e2 = box(0.07, 0.016, 0.02, dark, 0.04, 1.6, 0.115, g); e2.rotation.z = 0.4;
+      box(0.2, 0.012, 0.01, dark, 0, 1.565, 0.13, g);
+      box(0.06, 0.05, 0.012, mat(0x20242a), -0.04, 1.56, 0.128, g, false); box(0.06, 0.05, 0.012, mat(0x20242a), 0.04, 1.56, 0.128, g, false);
+    }
+    function limb(x, y) { const pv = new THREE.Group(); pv.position.set(x, y, 0); g.add(pv); return pv; }
+    const legL = limb(-0.1 * sc, 0.78), legR = limb(0.1 * sc, 0.78);
+    [legL, legR].forEach(pv => { cyl(0.075 * sc, 0.74, 0.075 * sc, pantsM, 0, -0.37, 0, pv); box(0.12, 0.08, 0.27, shoeM, 0, -0.76, 0.05, pv); });
+    const armL = limb(-0.27 * sc - 0.03, 1.3), armR = limb(0.27 * sc + 0.03, 1.3);
+    [armL, armR].forEach(pv => {
+      cyl(0.052, 0.3, 0.052, shirtM, 0, -0.15, 0, pv);
+      cyl(0.043, 0.28, 0.043, o.skinArms ? skin : shirtM, 0, -0.44, 0, pv);
+      sph(0.046, skin, 0, -0.6, 0, pv);
+    });
+    if (o.flashlight) {
+      const fl = cyl(0.03, 0.18, 0.03, mat(0x222831, { metalness: 0.6, roughness: 0.4 }), 0, -0.62, 0.09, armR); fl.rotation.x = PI / 2;
+      sph(0.032, mat(0xfff3c0, { emissive: 0xfff3c0, emissiveIntensity: 1 }), 0, -0.62, 0.19, armR);
+    }
+    return { group: g, legL, legR, armL, armR, body, head };
+  }
+  function animChar(ch, phase, amt, up) {
+    const s = Math.sin(phase) * 0.85 * amt;
+    ch.legL.rotation.x = s; ch.legR.rotation.x = -s;
+    if (up) { ch.armL.rotation.x = -1.35 + Math.sin(phase) * 0.2 * amt; ch.armR.rotation.x = -1.35 - Math.sin(phase) * 0.2 * amt; }
+    else { ch.armL.rotation.x = -s * 0.9; ch.armR.rotation.x = s * 0.9; }
+  }
+
+  /* ---------- мебель ---------- */
+  function addFurn(f) {
+    const g = new THREE.Group(); world.add(g);
+    const w = f.w, d = f.d, cx = f.x + w / 2, cz = f.y + d / 2;
+    g.position.set(cx, 0, cz);
+    const wood = mat(0x6b4426), wood2 = mat(0x4d3220), white = mat(0xe8e4dc);
+    switch (f.t) {
+      case 'bed':
+        box(w, 0.4, d, wood, 0, 0.25, 0, g);
+        box(w - 0.12, 0.22, d - 0.12, mat(0x7aa6d6), 0, 0.55, 0, g);
+        box(w - 0.14, 0.12, d * 0.55, mat(0x3f5f9a), 0, 0.64, d * 0.18, g);
+        box(w - 0.5, 0.14, 0.45, white, 0, 0.72, -d / 2 + 0.4, g);
+        box(w, 0.9, 0.1, wood2, 0, 0.55, -d / 2 + 0.05, g);
+        break;
+      case 'nightstand':
+        box(w - .1, 0.55, d - .1, wood2, 0, 0.275, 0, g);
+        box(0.4, 0.04, 0.02, mat(0x222222), 0, 0.35, (d - .1) / 2 + .01, g);
+        sph(0.1, mat(0xffe9a8, { emissive: 0xffc860, emissiveIntensity: 0.9 }), 0, 0.68, 0, g);
+        break;
+      case 'wardrobe': {
+        const fx = Math.sign(f.ex - f.x), fz = Math.sign(f.ey - f.y);
+        g.rotation.y = Math.atan2(fx, fz);
+        box(w - .04, 2.0, d - .04, mat(0x4a2f1a), 0, 1, 0, g);
+        box(0.03, 1.8, 0.02, mat(0x1c1008), 0, 1, (d - .04) / 2 + 0.01, g);
+        sph(0.03, mat(0xd9b24a), -0.1, 1, (d - .04) / 2 + 0.03, g); sph(0.03, mat(0xd9b24a), 0.1, 1, (d - .04) / 2 + 0.03, g);
+        wardrobes.push({ x: cx, y: cz, ex: f.ex + 0.5, ey: f.ey + 0.5 });
+        break; }
+      case 'table':
+        box(w, 0.1, d, wood, 0, 0.78, 0, g);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(s => box(0.1, 0.75, 0.1, wood2, s[0] * (w / 2 - 0.1), 0.375, s[1] * (d / 2 - 0.1), g));
+        if (w >= 2 && d >= 2) { cyl(0.12, 0.2, 0.12, mat(0xb8d0d8), 0, 0.93, 0, g); }
+        break;
+      case 'desk':
+        box(w, 0.08, d, wood, 0, 0.76, 0, g);
+        box(0.1, 0.75, d, wood2, -(w / 2 - 0.05), 0.375, 0, g); box(0.1, 0.75, d, wood2, w / 2 - 0.05, 0.375, 0, g);
+        box(0.35, 0.02, 0.28, mat(0xdddddd), 0, 0.81, 0, g);
+        break;
+      case 'counter':
+        box(w - .04, 0.95, d - .04, mat(0xb9b2a6), 0, 0.475, 0, g);
+        box(w, 0.08, d, mat(0x333a42), 0, 0.99, 0, g);
+        box(0.5, 0.04, 0.35, mat(0x9aa4ad), -w / 4, 1.05, 0, g);
+        break;
+      case 'fridge':
+        box(w - .06, 1.9, d - .06, mat(0xdfe4e8), 0, 0.95, 0, g);
+        box(0.04, 0.5, 0.04, mat(0x8a929a), 0.3, 1.2, (d - .06) / 2 + 0.03, g);
+        box(w - .06, 0.02, 0.02, mat(0x555a60), 0, 1.35, (d - .06) / 2 + 0.01, g);
+        break;
+      case 'couch':
+        box(w, 0.45, d, mat(0x8a3b3b), 0, 0.25, 0, g);
+        box(w, 0.55, 0.25, mat(0x7a3232), 0, 0.7, -d / 2 + 0.13, g);
+        box(0.22, 0.35, d, mat(0x7a3232), -(w / 2 - 0.11), 0.55, 0, g); box(0.22, 0.35, d, mat(0x7a3232), w / 2 - 0.11, 0.55, 0, g);
+        break;
+      case 'tv':
+        box(w, 0.6, d, wood2, 0, 0.3, 0, g);
+        box(w * 0.7, 0.5, 0.06, mat(0x0a0f18, { emissive: 0x1a3d66, emissiveIntensity: 0.9 }), 0, 0.95, 0, g);
+        box(0.3, 0.1, 0.2, mat(0x111111), 0, 0.65, 0, g);
+        break;
+      case 'shelf': {
+        const h = f.h || 1.9, along = d > w;
+        const inner = new THREE.Group(); g.add(inner);
+        if (along) inner.rotation.y = PI / 2;
+        const len = along ? d : w, dep = along ? w : d;
+        box(len, h, dep, wood2, 0, h / 2, 0, inner);
+        const cols = [0xa8473a, 0x3f6f9e, 0xd0b04a, 0x4f8a5a, 0x8a5aa0];
+        const rows = Math.max(2, Math.floor(h / 0.45));
+        for (let r = 0; r < rows; r++) {
+          const y = 0.25 + r * ((h - 0.35) / rows);
+          box(len + 0.02, 0.05, dep + 0.04, wood, 0, y, 0, inner);
+          for (let x = -len / 2 + 0.15; x < len / 2 - 0.1; x += 0.17) box(0.11, 0.26, 0.05, mat(cols[(Math.random() * 5) | 0]), x, y + 0.16, dep / 2 + 0.02, inner, false);
+        }
+        break; }
+      case 'crate': {
+        const h = f.h || 0.8;
+        box(w - .04, h, d - .04, mat(0x9a7340), 0, h / 2, 0, g);
+        box(w, 0.08, d, mat(0x6e5028), 0, 0.1, 0, g); box(w, 0.08, d, mat(0x6e5028), 0, h - 0.04, 0, g);
+        box(w + 0.01, h, 0.08, mat(0x6e5028), 0, h / 2, 0, g, false);
+        break; }
+      case 'armchair':
+        box(0.9, 0.4, 0.9, mat(0x3d6b57), 0, 0.25, 0, g);
+        box(0.9, 0.6, 0.2, mat(0x335a49), 0, 0.7, -0.35, g);
+        box(0.18, 0.35, 0.9, mat(0x335a49), -0.36, 0.55, 0, g); box(0.18, 0.35, 0.9, mat(0x335a49), 0.36, 0.55, 0, g);
+        break;
+      case 'machine':
+        box(w - .1, 1.2, d - .1, mat(0x56606b), 0, 0.6, 0, g);
+        box(w * 0.5, 0.3, 0.06, mat(0x15191f), 0, 0.85, (d - .1) / 2 + 0.03, g);
+        sph(0.07, mat(0xff3b30, { emissive: 0xff3b30, emissiveIntensity: 1.2 }), 0.3, 0.85, (d - .1) / 2 + 0.07, g);
+        cyl(0.12, 0.7, 0.12, mat(0x8a929a), -0.4, 1.5, -0.3, g);
+        break;
+    }
+    // отметка занятых клеток
+    for (let yy = f.y; yy < f.y + d; yy++) for (let xx = f.x; xx < f.x + w; xx++) grid[yy * GW + xx] = 2;
+  }
+
+  /* ---------- предметы ---------- */
+  function makeItem(kind, x, y) {
+    const g = new THREE.Group();
+    let col = 0xffd54a;
+    if (kind === 'key') {
+      const m = mat(0xffd54a, { emissive: 0xc89a10, emissiveIntensity: 0.8, metalness: 0.6, roughness: 0.3 });
+      const ring = new THREE.Mesh(TORUS, m); ring.position.set(0, 0.2, 0); ring.castShadow = true; g.add(ring);
+      box(0.06, 0.4, 0.04, m, 0, -0.1, 0, g); box(0.14, 0.05, 0.04, m, 0.06, -0.25, 0, g); box(0.1, 0.05, 0.04, m, 0.04, -0.15, 0, g);
+      const l = new THREE.PointLight(0xffd54a, 0.7, 4, 2); l.position.set(0, 0.2, 0); g.add(l);
+    } else if (kind === 'trap') {
+      col = 0xff8a3d;
+      box(0.5, 0.1, 0.5, mat(0x555a60, { metalness: 0.6 }), 0, 0, 0, g);
+      for (let i = 0; i < 6; i++) box(0.05, 0.14, 0.05, mat(0xcfd4d8, { metalness: .7 }), -0.2 + i * 0.08, 0.1, 0.18 * (i % 2 ? 1 : -1), g);
+      box(0.12, 0.05, 0.12, mat(0xff8a3d, { emissive: 0xff6a00, emissiveIntensity: .8 }), 0, 0.07, 0, g);
+    } else {
+      col = 0x6fe0a0;
+      const gm = mat(0x3fae6a, { transparent: true, opacity: 0.85, roughness: 0.2 });
+      cyl(0.09, 0.28, 0.09, gm, 0, 0, 0, g); cyl(0.04, 0.16, 0.04, gm, 0, 0.22, 0, g);
+    }
+    const base = new THREE.Mesh(RING, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }));
+    base.rotation.x = -PI / 2; base.position.y = -0.55; g.add(base);
+    g.position.set(x, 0.65, y);
+    world.add(g);
+    return { kind, x, y, group: g, taken: false, ph: Math.random() * 6 };
+  }
+
+  function makeTrapMesh() {
+    const g = new THREE.Group();
+    const m = mat(0x8a9097, { metalness: 0.7, roughness: 0.4 });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.045, 6, 20), m); ring.rotation.x = -PI / 2; ring.position.y = 0.05; g.add(ring);
+    for (let i = 0; i < 12; i++) { const a = i / 12 * 2 * PI; const c = new THREE.Mesh(CONE, mat(0xd2d6da, { metalness: 0.8, roughness: 0.3 })); c.position.set(Math.cos(a) * 0.3, 0.13, Math.sin(a) * 0.3); g.add(c); }
+    cyl(0.12, 0.04, 0.12, mat(0xb02a22), 0, 0.04, 0, g);
+    g.userData.ringGeo = ring.geometry;
+    return g;
+  }
+
+  /* ---------- построение уровня ---------- */
+  function clearWorld() {
+    world.traverse(o => { if (o.geometry && !SHARED.has(o.geometry)) o.geometry.dispose(); });
+    while (world.children.length) world.remove(world.children[0]);
+  }
+  function buildLevel(n) {
+    clearWorld();
+    L = LEVELS[n - 1]; GW = L.W; GH = L.H;
+    grid = new Uint8Array(GW * GH).fill(1);
+    items = []; wardrobes = []; placedTraps = []; proj = null;
+    L.rooms.forEach(r => { for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) grid[y * GW + x] = 0; });
+    L.doors.forEach(d => { grid[d[1] * GW + d[0]] = 0; });
+    grid[L.exit[1] * GW + L.exit[0]] = 3;
+
+    // полы
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({ color: 0x06070d }));
+    ground.rotation.x = -PI / 2; ground.position.set(GW / 2, -0.02, GH / 2); world.add(ground);
+    function floorPlane(x, y, w, h, type) {
+      const geo = new THREE.PlaneGeometry(w, h);
+      const uv = geo.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w, uv.getY(i) * h);
+      const m = new THREE.Mesh(geo, FLOOR_MATS[type]);
+      m.rotation.x = -PI / 2; m.position.set(x + w / 2, 0, y + h / 2); m.receiveShadow = true; world.add(m);
+    }
+    L.rooms.forEach(r => {
+      floorPlane(r.x, r.y, r.w, r.h, r.floor);
+      if (r.rug) { const q = r.rug; const rg = box(q[2], 0.03, q[3], mat(q[4]), q[0] + q[2] / 2, 0.015, q[1] + q[3] / 2, world, false); rg.castShadow = false; }
+      const l = new THREE.PointLight(0xffd9a0, 0.85, 11, 1.6);
+      l.position.set(r.x + r.w / 2, 2.1, r.y + r.h / 2); world.add(l);
+    });
+    L.doors.forEach(d => floorPlane(d[0], d[1], 1, 1, 'wood'));
+    floorType = new Array(GW * GH).fill('wood');
+    L.rooms.forEach(r => { for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) floorType[y * GW + x] = r.floor; });
+    floorPlane(L.exit[0], L.exit[1], 1, 1, 'wood');
+
+    // стены (инстансы)
+    const wallH = 2.2, cells = [];
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      if (grid[y * GW + x] !== 1) continue;
+      let near = false;
+      for (let oy = -1; oy <= 1 && !near; oy++) for (let ox = -1; ox <= 1; ox++) { if (inb(x + ox, y + oy) && grid[(y + oy) * GW + x + ox] !== 1) { near = true; break; } }
+      if (near) cells.push([x, y]);
+    }
+    const walls = new THREE.InstancedMesh(BOX, WALL_MAT, cells.length);
+    const caps = new THREE.InstancedMesh(BOX, CAP_MAT, cells.length);
+    const dm = new THREE.Object3D();
+    cells.forEach((c, i) => {
+      dm.position.set(c[0] + .5, wallH / 2, c[1] + .5); dm.scale.set(1, wallH, 1); dm.updateMatrix(); walls.setMatrixAt(i, dm.matrix);
+      dm.position.set(c[0] + .5, wallH + .04, c[1] + .5); dm.scale.set(1, .08, 1); dm.updateMatrix(); caps.setMatrixAt(i, dm.matrix);
+    });
+    walls.castShadow = true; walls.receiveShadow = true; caps.castShadow = true; caps.receiveShadow = true;
+    walls.instanceMatrix.needsUpdate = true; caps.instanceMatrix.needsUpdate = true;
+    world.add(walls); world.add(caps);
+
+    // мебель
+    L.furn.forEach(addFurn);
+
+    // плинтусы и наличники дверей
+    const bb = [];
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      if (grid[y * GW + x] !== 0) continue;
+      if (isWall(x + 1, y)) bb.push([x + 1 - 0.03, y + 0.5, 0.06, 1]);
+      if (isWall(x - 1, y)) bb.push([x + 0.03, y + 0.5, 0.06, 1]);
+      if (isWall(x, y + 1)) bb.push([x + 0.5, y + 1 - 0.03, 1, 0.06]);
+      if (isWall(x, y - 1)) bb.push([x + 0.5, y + 0.03, 1, 0.06]);
+    }
+    const base = new THREE.InstancedMesh(BOX, mat(0xcdc3ae, { roughness: 0.6 }), bb.length);
+    bb.forEach((q, i) => { dm.position.set(q[0], 0.08, q[1]); dm.scale.set(q[2], 0.16, q[3]); dm.updateMatrix(); base.setMatrixAt(i, dm.matrix); });
+    base.receiveShadow = true; base.instanceMatrix.needsUpdate = true; world.add(base);
+    const trimM = mat(0x4a3320, { roughness: 0.6 });
+    L.doors.forEach(d => {
+      const x = d[0], y = d[1];
+      if (isWall(x - 1, y) && isWall(x + 1, y)) { box(0.07, 2.1, 1, trimM, x + 0.035, 1.05, y + 0.5, world); box(0.07, 2.1, 1, trimM, x + 0.965, 1.05, y + 0.5, world); }
+      else { box(1, 2.1, 0.07, trimM, x + 0.5, 1.05, y + 0.035, world); box(1, 2.1, 0.07, trimM, x + 0.5, 1.05, y + 0.965, world); }
+    });
+
+    // выходная дверь
+    const ex = L.exit[0] + .5, ey = L.exit[1] + .5;
+    exitDoor = new THREE.Group(); exitDoor.position.set(ex, 0, ey); world.add(exitDoor);
+    box(0.5, 2.1, 0.94, mat(0x1f5f3f), 0, 1.05, 0, exitDoor);
+    box(0.08, 0.2, 0.08, mat(0xd9b24a), -0.28, 1.0, 0.25, exitDoor);
+    exitLamp = sph(0.1, new THREE.MeshBasicMaterial({ color: 0xff3b30 }), -0.3, 2.35, 0, world);
+    exitLamp.position.set(ex - 0.4, 2.35, ey);
+    exitLight = new THREE.PointLight(0xff3b30, 1.1, 8, 1.6); exitLight.position.set(ex - 0.9, 1.8, ey); world.add(exitLight);
+    const dc = document.createElement('canvas'); dc.width = 256; dc.height = 96;
+    const dg = dc.getContext('2d'); dg.font = 'bold 54px Arial'; dg.textAlign = 'center'; dg.textBaseline = 'middle';
+    dg.fillStyle = 'rgba(255,255,255,.85)'; dg.fillText('ВЫХОД ▶', 128, 50);
+    const decal = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.98), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dc), transparent: true, depthWrite: false }));
+    decal.rotation.x = -PI / 2; decal.position.set(ex - 1.6, 0.03, ey); world.add(decal);
+
+    // предметы
+    L.keys.forEach(k => items.push(makeItem('key', k[0], k[1])));
+    L.traps.forEach(k => items.push(makeItem('trap', k[0], k[1])));
+    L.bottles.forEach(k => items.push(makeItem('bottle', k[0], k[1])));
+
+    // игрок
+    const pc = makeChar({ skin: 0xe9bf9a, shirt: 'jacket', pants: 'denim', hair: 0x2a1c12, flashlight: true });
+    world.add(pc.group);
+    const spot = new THREE.SpotLight(0xfff0cf, 1.7, 12, 0.5, 0.65, 1.2);
+    spot.position.set(0, 1.25, 0.55); spot.target.position.set(0, 0.1, 5);
+    spot.castShadow = true; spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.0008;
+    pc.group.add(spot); pc.group.add(spot.target);
+    P = { x: L.start[0], y: L.start[1], yaw: 0, ch: pc, group: pc.group, phase: 0, moving: false, sprinting: false, crouch: false, stamina: 1, exhausted: false, hidden: false, hideIdx: -1, stepT: 0, speed: 0, crouchK: 1, vx: 0, vy: 0 };
+    noiseRing = new THREE.Mesh(new THREE.RingGeometry(0.96, 1, 48), new THREE.MeshBasicMaterial({ color: 0x7fd1ff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }));
+    noiseRing.rotation.x = -PI / 2; noiseRing.position.y = 0.05; world.add(noiseRing);
+    const dgeo = new THREE.BufferGeometry(), dpos = new Float32Array(DN * 3);
+    for (let i = 0; i < DN; i++) { dpos[i * 3] = P.x + (Math.random() - .5) * 20; dpos[i * 3 + 1] = 0.2 + Math.random() * 2.2; dpos[i * 3 + 2] = P.y + (Math.random() - .5) * 20; }
+    dgeo.setAttribute('position', new THREE.BufferAttribute(dpos, 3));
+    const dpts = new THREE.Points(dgeo, new THREE.PointsMaterial({ color: 0xfff1d0, size: 0.05, transparent: true, opacity: 0.35, depthWrite: false }));
+    dpts.frustumCulled = false; world.add(dpts); dust = { pos: dpos, geo: dgeo };
+
+    // сосед
+    const nc = makeChar({ skin: 0xd9a182, shirt: 'plaid', pants: 'khaki', neighbor: true, build: 1.28, belly: true, skinArms: true });
+    nc.group.scale.setScalar(1.1); world.add(nc.group);
+    N = { x: L.nstart[0], y: L.nstart[1], yaw: PI, ch: nc, group: nc.group, state: 'patrol', path: [], pi: 0, wait: 0, wp: 0, detect: 0, lastSeen: { x: 0, y: 0 }, lose: 0, pathT: 0, target: null, timer: 0, checkT: 0, phase: 0, speed: 0, noiseCd: 0, mark: null, canSee: false, spd: 0, stepT: 0 };
+    N.mark = new THREE.Sprite(SPR_Q); N.mark.scale.set(0.8, 0.8, 1); N.mark.renderOrder = 10; N.mark.visible = false; world.add(N.mark);
+    stars = new THREE.Group(); stars.visible = false; world.add(stars);
+    for (let i = 0; i < 3; i++) sph(0.07, new THREE.MeshBasicMaterial({ color: 0xffe14a }), 0, 0, 0, stars);
+
+    // конус зрения
+    coneGeo = new THREE.BufferGeometry();
+    coneGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((CONE_N + 2) * 3), 3));
+    const idx = []; for (let i = 0; i < CONE_N; i++) idx.push(0, i + 1, i + 2);
+    coneGeo.setIndex(idx);
+    coneMesh = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }));
+    coneMesh.frustumCulled = false; coneMesh.renderOrder = 2; world.add(coneMesh);
+
+    G.keys = 0; G.traps = 0; G.bottles = 0; G.t = 0; G.exitOpen = false;
+    exitDoor.position.y = 0;
+    N.yaw = 0;
+    camPos.set(P.x, 13.5, P.y + 8); camLook.set(P.x, 0, P.y);
+    camera.position.copy(camPos); camera.lookAt(camLook);
+  }
+
+  /* ---------- ИИ соседа ---------- */
+  function setPath(tx, ty) { N.path = findPath(N.x, N.y, tx, ty); N.pi = 0; }
+  function followPath(spd, dt) {
+    if (N.pi >= N.path.length) return true;
+    const t = N.path[N.pi], dx = t.x - N.x, dy = t.y - N.y, d = Math.hypot(dx, dy), step = spd * dt;
+    if (d <= step) { N.x = t.x; N.y = t.y; N.pi++; return N.pi >= N.path.length; }
+    N.x += dx / d * step; N.y += dy / d * step;
+    turnTo(Math.atan2(dx, dy), dt, 8);
+    return false;
+  }
+  function moveDirect(tx, ty, spd, dt) {
+    const dx = tx - N.x, dy = ty - N.y, d = Math.hypot(dx, dy);
+    if (d < 0.01) return;
+    const step = Math.min(d, spd * dt);
+    N.x += dx / d * step; N.y += dy / d * step;
+    turnTo(Math.atan2(dx, dy), dt, 10);
+  }
+  function turnTo(a, dt, rate) { N.yaw += angDiff(N.yaw, a) * Math.min(1, dt * rate); }
+  function backToPatrol() {
+    N.state = 'patrol'; N.checkT = 0; N.wait = 0;
+    const w = L.wps[N.wp]; setPath(w[0], w[1]);
+  }
+  function startChase() {
+    if (N.state === 'chase') return;
+    N.state = 'chase'; N.detect = 1; N.lose = 0; N.pathT = 0;
+    SFX.alert(); toast('Сосед заметил вас! Бегите или спрячьтесь!', 1800);
+  }
+  function noiseAt(x, y, r) {
+    if (!N || N.state === 'chase' || N.state === 'stunned') return;
+    const d = Math.hypot(N.x - x, N.y - y);
+    const eff = hasLOS(N.x, N.y, x, y) ? r : r * 0.6;
+    if (d > eff) return;
+    if (N.state === 'investigate' && N.target && Math.hypot(N.target.x - x, N.target.y - y) < 2.5) return;
+    N.state = 'investigate'; N.target = { x: x, y: y }; setPath(x, y);
+    if (N.path.length === 0) { N.state = 'search'; N.timer = 3; }
+  }
+  function catchPlayer(msg) {
+    if (G.state !== 'play') return;
+    SFX.caught();
+    endLevel(false, msg);
+  }
+  function updateNeighbor(dt) {
+    const sp = L.speed;
+    const dxp = P.x - N.x, dyp = P.y - N.y, dist = Math.hypot(dxp, dyp);
+    let canSee = false;
+    if (N.state !== 'stunned' && dist < VIS_RANGE + 2 && hasLOS(N.x, N.y, P.x, P.y)) {
+      if (P.hidden) canSee = dist < 1.3;
+      else {
+        const ang = Math.abs(angDiff(N.yaw, Math.atan2(dxp, dyp)));
+        const range = N.state === 'chase' ? VIS_RANGE + 2 : VIS_RANGE;
+        canSee = (dist < range && ang < HALF) || dist < 1.6;
+      }
+    }
+    N.canSee = canSee;
+    if (canSee) {
+      N.lastSeen = { x: P.x, y: P.y };
+      if (N.state === 'chase') { N.detect = 1; N.lose = 0; }
+      else {
+        let rate = 0.9 * (1.25 - Math.min(1, dist / VIS_RANGE));
+        if (P.sprinting) rate *= 1.5;
+        if (P.crouch) rate *= 0.6;
+        if (dist < 2.5) rate += 1.5;
+        N.detect += rate * dt;
+        if (N.detect >= 1) startChase();
+      }
+    } else if (N.state !== 'chase') N.detect = Math.max(0, N.detect - 0.4 * dt);
+
+    if (N.state !== 'stunned' && canSee && dist < 0.85) return catchPlayer('Сосед поймал вас!');
+
+    switch (N.state) {
+      case 'patrol': {
+        let spd = 1.7 * sp;
+        if (canSee && N.detect > 0.25) { spd *= 0.2; turnTo(Math.atan2(dxp, dyp), dt, 6); }
+        if (N.pi >= N.path.length) {
+          N.wait -= dt; N.yaw += Math.sin(G.t * 2) * dt * 1.2;
+          if (N.wait <= 0) { N.wp = (N.wp + 1) % L.wps.length; const w = L.wps[N.wp]; setPath(w[0], w[1]); N.wait = 1.1; }
+        } else followPath(spd, dt);
+        break; }
+      case 'investigate':
+        if (canSee && N.detect > 0.25) turnTo(Math.atan2(dxp, dyp), dt, 6);
+        if (N.pi >= N.path.length) { N.state = 'search'; N.timer = 3; }
+        else followPath(2.2 * sp, dt);
+        break;
+      case 'search':
+        N.timer -= dt; N.yaw += Math.sin(G.t * 3) * dt * 2.2;
+        if (P.hidden && dist < 1.6) { N.checkT += dt; if (N.checkT > 1.2) return catchPlayer('Сосед открыл шкаф и нашёл вас!'); }
+        else N.checkT = Math.max(0, N.checkT - dt);
+        if (N.timer <= 0) backToPatrol();
+        break;
+      case 'chase': {
+        const spd = 3.5 * sp;
+        if (dist < 0.9 && (canSee || P.hidden)) return catchPlayer(P.hidden ? 'Сосед вытащил вас из шкафа!' : 'Сосед поймал вас!');
+        if (!canSee) N.lose += dt;
+        N.detect = canSee ? 1 : Math.max(0.35, 1 - N.lose / 3);
+        const tx = canSee ? P.x : N.lastSeen.x, ty = canSee ? P.y : N.lastSeen.y;
+        if (directFree(N.x, N.y, tx, ty, 0.28)) { moveDirect(tx, ty, spd, dt); N.path = []; N.pi = 0; }
+        else {
+          N.pathT -= dt;
+          if (N.pathT <= 0 || N.pi >= N.path.length) { setPath(tx, ty); N.pathT = 0.3; }
+          followPath(spd, dt);
+        }
+        if (!canSee && Math.hypot(N.x - N.lastSeen.x, N.y - N.lastSeen.y) < 0.7) { N.state = 'search'; N.timer = 3.5; N.checkT = 0; }
+        else if (N.lose > 3.5) { N.state = 'search'; N.timer = 3.5; N.checkT = 0; }
+        break; }
+      case 'stunned':
+        N.timer -= dt;
+        if (N.timer <= 0) { N.state = 'search'; N.timer = 2.5; N.detect = 0; N.checkT = 0; }
+        break;
+    }
+  }
+
+  /* ---------- игрок и предметы ---------- */
+  function updatePlayer(dt) {
+    P.sprinting = false;
+    if (P.hidden) { P.moving = false; P.speed = 0; P.vx = P.vy = 0; return; }
+    let mx = (held.KeyD || held.ArrowRight ? 1 : 0) - (held.KeyA || held.ArrowLeft ? 1 : 0) + joy.x;
+    let mz = (held.KeyS || held.ArrowDown ? 1 : 0) - (held.KeyW || held.ArrowUp ? 1 : 0) + joy.y;
+    const len = Math.hypot(mx, mz);
+    P.moving = len > 0.15;
+    const wantRun = (held.ShiftLeft || held.ShiftRight || touchRun) && !P.crouch;
+    let spd = 0, ux = 0, uz = 0;
+    if (P.moving) {
+      if (len > 1) { mx /= len; mz /= len; }
+      const ul = Math.hypot(mx, mz) || 1; ux = mx / ul; uz = mz / ul;
+      const k = Math.min(1, len);
+      if (P.crouch) spd = 1.5 * k;
+      else if (wantRun && P.stamina > 0 && !P.exhausted) { spd = 4.4 * k; P.sprinting = true; }
+      else spd = 2.9 * k;
+      P.yaw += angDiff(P.yaw, Math.atan2(ux, uz)) * Math.min(1, dt * 10);
+    }
+    const acc = Math.min(1, dt * (P.moving ? 9 : 12));
+    P.vx += (ux * spd - P.vx) * acc; P.vy += (uz * spd - P.vy) * acc;
+    const nx = P.x + P.vx * dt, ny = P.y + P.vy * dt;
+    if (!circleHit(nx, P.y, 0.3)) P.x = nx; else P.vx = 0;
+    if (!circleHit(P.x, ny, 0.3)) P.y = ny; else P.vy = 0;
+    P.speed = Math.hypot(P.vx, P.vy);
+    if (P.sprinting) { P.stamina -= 0.32 * dt; if (P.stamina <= 0) { P.stamina = 0; P.exhausted = true; } }
+    else { P.stamina = Math.min(1, P.stamina + 0.22 * dt); if (P.exhausted && P.stamina > 0.35) P.exhausted = false; }
+    P.stepT -= dt;
+    if (P.moving && P.stepT <= 0) {
+      P.stepT = P.sprinting ? 0.28 : P.crouch ? 0.7 : 0.45;
+      stepSound(floorAt(P.x, P.y), P.sprinting ? 0.16 : P.crouch ? 0.03 : 0.09);
+      noiseAt(P.x, P.y, P.sprinting ? 7.5 : P.crouch ? 1.6 : 4);
+    }
+  }
+  function noiseRadius() { return P.hidden ? 0 : (P.moving ? (P.sprinting ? 7.5 : P.crouch ? 1.6 : 4) : 0.6); }
+
+  function updateItems(dt) {
+    items.forEach(it => {
+      if (it.taken) return;
+      it.ph += dt * 2.4;
+      it.group.position.y = 0.65 + Math.sin(it.ph) * 0.08;
+      it.group.rotation.y += dt * 1.6;
+      if (!P.hidden && Math.hypot(it.x - P.x, it.y - P.y) < 0.8) {
+        it.taken = true; it.group.visible = false; SFX.pickup();
+        if (it.kind === 'key') {
+          G.keys++;
+          if (G.keys >= L.keys.length) openExit(); else toast('Ключ найден: ' + G.keys + ' из ' + L.keys.length, 1800);
+        } else if (it.kind === 'trap') { G.traps++; toast('Капкан в инвентаре — поставьте его на пути соседа', 2200); }
+        else { G.bottles++; toast('Бутылка: бросьте её, чтобы отвлечь соседа', 2200); }
+      }
+    });
+  }
+  function openExit() {
+    G.exitOpen = true; grid[L.exit[1] * GW + L.exit[0]] = 0;
+    exitLight.color.set(0x3dff7a); exitLamp.material.color.set(0x3dff7a);
+    SFX.door(); toast('Все ключи собраны! Бегите к выходу!', 3000);
+  }
+  function placeTrap() {
+    if (G.state !== 'play' || P.hidden) return;
+    if (G.traps <= 0) { toast('Нет капканов — ищите их по дому', 1500); return; }
+    G.traps--;
+    const m = makeTrapMesh(); m.position.set(P.x, 0, P.y); world.add(m);
+    placedTraps.push({ x: P.x, y: P.y, mesh: m, active: true });
+    SFX.click();
+  }
+  function throwBottle() {
+    if (G.state !== 'play' || P.hidden || proj) return;
+    if (G.bottles <= 0) { toast('Нет бутылок', 1500); return; }
+    G.bottles--;
+    const dx = Math.sin(P.yaw), dz = Math.cos(P.yaw);
+    let lx = P.x, ly = P.y;
+    for (let d = 0.3; d <= 7.5; d += 0.25) {
+      const tx = P.x + dx * d, ty = P.y + dz * d;
+      if (isWall(Math.floor(tx), Math.floor(ty))) break;
+      lx = tx; ly = ty;
+    }
+    const mesh = new THREE.Group();
+    const gm = mat(0x3fae6a, { transparent: true, opacity: 0.9 });
+    cyl(0.07, 0.22, 0.07, gm, 0, 0, 0, mesh); cyl(0.03, 0.12, 0.03, gm, 0, 0.16, 0, mesh);
+    world.add(mesh);
+    proj = { x0: P.x, y0: P.y, x1: lx, y1: ly, u: 0, mesh: mesh };
+    SFX.throwIt();
+  }
+  function updateProj(dt) {
+    if (!proj) return;
+    proj.u += dt / 0.7;
+    const u = Math.min(1, proj.u);
+    proj.mesh.position.set(proj.x0 + (proj.x1 - proj.x0) * u, 1.0 + 1.6 * Math.sin(PI * u) - 0.85 * u, proj.y0 + (proj.y1 - proj.y0) * u);
+    proj.mesh.rotation.x += dt * 14; proj.mesh.rotation.z += dt * 9;
+    if (proj.u >= 1) {
+      SFX.shatter(); noiseAt(proj.x1, proj.y1, 11);
+      world.remove(proj.mesh); proj = null;
+    }
+  }
+  function updateTraps() {
+    placedTraps.forEach(t => {
+      if (!t.active || N.state === 'stunned') return;
+      if (Math.hypot(N.x - t.x, N.y - t.y) < 0.6) {
+        t.active = false; t.mesh.scale.y = 0.4; t.mesh.children.forEach(c => { if (c.material && c.material.color) c.material = c.material.clone(); });
+        N.state = 'stunned'; N.timer = 5; N.path = []; N.pi = 0; N.detect = 0;
+        SFX.trap(); toast('Сосед попал в капкан! У вас 5 секунд', 2200);
+      }
+    });
+  }
+  function toggleHide() {
+    if (G.state !== 'play') return;
+    if (P.hidden) {
+      const w = wardrobes[P.hideIdx];
+      P.x = w.ex; P.y = w.ey; P.hidden = false; SFX.hide(); return;
+    }
+    let bi = -1, bd = 1.5;
+    wardrobes.forEach((w, i) => { const d = Math.hypot(w.x - P.x, w.y - P.y); if (d < bd) { bd = d; bi = i; } });
+    if (bi < 0) return;
+    if (N.state === 'chase' && N.canSee) { toast('Сосед вас видит — шкаф не поможет!', 1600); return; }
+    P.hidden = true; P.hideIdx = bi; P.x = wardrobes[bi].x; P.y = wardrobes[bi].y; SFX.hide();
+    toast('Вы спрятались. Не высовывайтесь, пока сосед рядом', 2000);
+  }
+
+  /* ---------- камера и визуальная часть ---------- */
+  function updateCamera(dt, snap) {
+    const asp = camera.aspect;
+    const sc = asp < 1.2 ? 1.12 + (1.2 - asp) * 0.7 : 1;
+    const tx = P.x, tz = P.y;
+    const target = new THREE.Vector3(tx, 13.5 * sc, tz + 8 * sc);
+    const k = snap ? 1 : 1 - Math.exp(-dt * 5);
+    camPos.lerp(target, k);
+    camLook.lerp(new THREE.Vector3(tx, 0, tz - 0.5), k);
+    camera.position.copy(camPos); camera.lookAt(camLook);
+  }
+  function updateVisuals(dt) {
+    sun.position.set(P.x + 8, 16, P.y + 6); sun.target.position.set(P.x, 0, P.y);
+    // игрок
+    P.crouchK += ((P.crouch ? 0.78 : 1) - P.crouchK) * Math.min(1, dt * 12);
+    P.group.visible = !P.hidden;
+    P.group.position.set(P.x, 0, P.y); P.group.rotation.y = P.yaw; P.group.scale.y = P.crouchK;
+    P.phase += P.speed * dt * 3.4;
+    animChar(P.ch, P.phase, P.moving ? Math.min(1, P.speed / 2) : 0, false);
+    const nr = noiseRadius();
+    noiseRing.visible = !P.hidden;
+    const cur = noiseRing.scale.x; const ns = cur + (nr - cur) * Math.min(1, dt * 10);
+    noiseRing.scale.set(ns, ns, ns); noiseRing.position.set(P.x, 0.05, P.y);
+    // сосед
+    const moved = Math.hypot(N.x - (N.px === undefined ? N.x : N.px), N.y - (N.py === undefined ? N.y : N.py));
+    N.px = N.x; N.py = N.y;
+    const spd = dt > 0 ? moved / dt : 0; N.spd = spd;
+    N.phase += spd * dt * 3.2;
+    N.group.position.set(N.x, 0, N.y); N.group.rotation.y = N.yaw;
+    animChar(N.ch, N.phase, Math.min(1, spd / 2), N.state === 'chase');
+    N.group.rotation.z = N.state === 'stunned' ? Math.sin(G.t * 7) * 0.14 : 0;
+    N.group.position.y = N.state === 'stunned' ? 0 : Math.abs(Math.sin(N.phase)) * 0.04;
+    // метки
+    let mk = null;
+    if (N.state === 'chase') mk = SPR_EXCL; else if (N.state === 'investigate' || N.state === 'search' || (N.detect > 0.25 && N.state !== 'stunned')) mk = SPR_Q;
+    N.mark.visible = !!mk; if (mk) N.mark.material = mk;
+    N.mark.position.set(N.x, 2.9, N.y);
+    stars.visible = N.state === 'stunned';
+    if (stars.visible) stars.children.forEach((s, i) => { const a = G.t * 4 + i * 2.09; s.position.set(N.x + Math.cos(a) * 0.4, 2.45, N.y + Math.sin(a) * 0.4); });
+    // конус зрения
+    coneMesh.visible = N.state !== 'stunned';
+    if (coneMesh.visible) {
+      const pos = coneGeo.attributes.position.array;
+      const range = N.state === 'chase' ? VIS_RANGE + 2 : VIS_RANGE;
+      pos[0] = N.x; pos[1] = 0.07; pos[2] = N.y;
+      for (let i = 0; i <= CONE_N; i++) {
+        const a = N.yaw - HALF + i * (2 * HALF / CONE_N), dx = Math.sin(a), dz = Math.cos(a);
+        const d = castRay(N.x, N.y, dx, dz, range);
+        pos[(i + 1) * 3] = N.x + dx * d; pos[(i + 1) * 3 + 1] = 0.07; pos[(i + 1) * 3 + 2] = N.y + dz * d;
+      }
+      coneGeo.attributes.position.needsUpdate = true;
+      const col = N.state === 'chase' ? 0xff3b30 : (N.state === 'investigate' || N.state === 'search' || N.detect > 0.4) ? 0xff9a2e : 0xffe066;
+      coneMesh.material.color.setHex(col);
+      coneMesh.material.opacity = N.state === 'chase' ? 0.26 : 0.15;
+    }
+    // выходная дверь
+    const ty = G.exitOpen ? 2.3 : 0;
+    exitDoor.position.y += (ty - exitDoor.position.y) * Math.min(1, dt * 3);
+    // предметы мигают
+    updateDust(dt);
+  }
+
+  function floorAt(x, y) { return floorType[Math.floor(y) * GW + Math.floor(x)] || 'wood'; }
+  function ambientUpdate(dt) {
+    if (N.spd > 0.5 && N.state !== 'stunned') {
+      N.stepT -= dt;
+      if (N.stepT <= 0) {
+        N.stepT = N.state === 'chase' ? 0.3 : 0.55;
+        const v = Math.max(0, 1 - Math.hypot(N.x - P.x, N.y - P.y) / 14) * 0.45;
+        if (v > 0.02) stepSound(floorAt(N.x, N.y), v);
+      }
+    }
+    if (N.state === 'chase') { G.hb -= dt; if (G.hb <= 0) { G.hb = 0.55; tone(58, .14, 'sine', .4, -18); tone(52, .12, 'sine', .28, -14, .17); } }
+    G.creak -= dt;
+    if (G.creak <= 0) { G.creak = 9 + Math.random() * 14; tone(80 + Math.random() * 50, .7, 'sawtooth', .03, 35); noise(.5, .035, 500); }
+  }
+  function updateDust(dt) {
+    const a = dust.pos;
+    for (let i = 0; i < DN; i++) {
+      const k = i * 3;
+      a[k] += Math.sin(G.t * 0.3 + i) * dt * 0.05; a[k + 1] += Math.sin(G.t * 0.2 + i * 1.7) * dt * 0.04 + dt * 0.01; a[k + 2] += Math.cos(G.t * 0.25 + i) * dt * 0.05;
+      if (a[k + 1] > 2.4) a[k + 1] = 0.2;
+      if (a[k] - P.x > 10) a[k] -= 20; else if (a[k] - P.x < -10) a[k] += 20;
+      if (a[k + 2] - P.y > 10) a[k + 2] -= 20; else if (a[k + 2] - P.y < -10) a[k + 2] += 20;
+    }
+    dust.geo.attributes.position.needsUpdate = true;
+  }
+
+  /* ---------- HUD ---------- */
+  const fmt = t => { t = Math.floor(t); return Math.floor(t / 60) + ':' + ('0' + (t % 60)).slice(-2); };
+  let toastT = 0;
+  function toast(msg, ms) {
+    const el = $('toast'); el.textContent = msg; el.classList.remove('hidden');
+    clearTimeout(toastT); toastT = setTimeout(() => el.classList.add('hidden'), ms || 2500);
+  }
+  const STATE_TXT = { patrol: 'спокоен', investigate: 'услышал шум', search: 'ищет вас', chase: 'ПОГОНЯ!', stunned: 'оглушён' };
+  function updateHud() {
+    $('hKeys').textContent = G.keys + '/' + L.keys.length;
+    $('hTime').textContent = fmt(G.t);
+    $('hTrap').textContent = G.traps; $('hBot').textContent = G.bottles;
+    let st = STATE_TXT[N.state];
+    if (N.state === 'patrol' && N.detect > 0.25) st = 'подозревает…';
+    $('hState').textContent = st;
+    $('detBar').style.width = Math.round(clamp(N.detect, 0, 1) * 100) + '%';
+    $('stamBar').style.width = Math.round(P.stamina * 100) + '%';
+    $('vignette').style.opacity = N.state === 'chase' ? 0.9 : Math.min(0.5, N.detect * 0.5);
+    let hint = '';
+    if (P.hidden) hint = isTouch ? 'Нажмите ✋, чтобы выйти из шкафа' : '[E] — выйти из шкафа';
+    else if (wardrobes.some(w => Math.hypot(w.x - P.x, w.y - P.y) < 1.5)) hint = isTouch ? 'Нажмите ✋, чтобы спрятаться' : '[E] — спрятаться в шкафу';
+    else if (G.exitOpen) hint = 'Дверь открыта — к выходу!';
+    $('hint').classList.toggle('hidden', !hint); $('hintTxt').textContent = hint;
+  }
+
+  /* ---------- конец уровня и состояния ---------- */
+  function checkExit() {
+    if (G.exitOpen && P.x > L.exit[0] + 0.15) endLevel(true);
+  }
+  function endLevel(win, msg) {
+    if (G.state !== 'play') return;
+    G.state = 'end';
+    $('touch').classList.add('hidden'); $('hint').classList.add('hidden'); $('vignette').style.opacity = 0;
+    if (win) {
+      SFX.win();
+      const k = String(G.level), prev = save.best[k];
+      const isBest = !prev || G.t < prev;
+      if (isBest) save.best[k] = Math.round(G.t * 10) / 10;
+      if (G.level < LEVELS.length) save.unlocked = Math.max(save.unlocked, G.level + 1);
+      writeSave();
+      $('endTitle').textContent = 'Вы сбежали!';
+      $('endText').textContent = 'Время: ' + fmt(G.t) + (isBest ? ' — новый рекорд!' : ' (рекорд: ' + fmt(save.best[k]) + ')') + (G.level >= LEVELS.length ? ' Вы прошли все уровни!' : ' Следующий уровень открыт.');
+      const hasNext = G.level < LEVELS.length;
+      $('eMain').textContent = hasNext ? 'Следующий уровень' : 'В главное меню';
+      $('eMain').onclick = () => { if (hasNext) startLevel(G.level + 1); else goMenu(); };
+    } else {
+      $('endTitle').textContent = 'Вас поймали';
+      $('endText').textContent = (msg || 'Сосед вас поймал.') + ' Попробуйте двигаться тише и использовать шкафы, капканы и бутылки.';
+      $('eMain').textContent = 'Попробовать снова';
+      $('eMain').onclick = () => startLevel(G.level);
+    }
+    showOverlay('end');
+  }
+  function showOverlay(id) { ['menu', 'pause', 'end'].forEach(k => $(k).classList.toggle('hidden', k !== id)); }
+  function hideOverlays() { ['menu', 'pause', 'end'].forEach(k => $(k).classList.add('hidden')); }
+  function startLevel(n) {
+    initAudio();
+    G.level = n; buildLevel(n);
+    hideOverlays(); $('hud').classList.remove('hidden'); $('touch').classList.remove('hidden');
+    G.state = 'play';
+    toast('Уровень ' + n + ': «' + L.name + '». Найдите ключей: ' + L.keys.length, 3500);
+    updateHud();
+  }
+  function goMenu() {
+    G.state = 'menu'; buildLevel(1); renderMenu();
+    $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); $('vignette').style.opacity = 0;
+    $('toast').classList.add('hidden'); showOverlay('menu');
+  }
+  function pauseGame() { if (G.state !== 'play') return; G.state = 'pause'; showOverlay('pause'); for (const k in held) held[k] = false; joy.x = joy.y = 0; touchRun = false; }
+  function resumeGame() { if (G.state !== 'pause') return; G.state = 'play'; hideOverlays(); }
+  function toggleFS() {
+    try {
+      const d = document, el = d.documentElement;
+      if (!d.fullscreenElement && !d.webkitFullscreenElement) {
+        const rq = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (rq) { const p = rq.call(el); if (p && p.then) p.then(() => { try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e2) {} }); if (p && p.catch) p.catch(() => toast('Полноэкранный режим недоступен')); }
+        else toast('Этот браузер не поддерживает полный экран. На iPhone добавьте страницу на экран «Домой».', 3500);
+      } else (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+    } catch (e) { toast('Полноэкранный режим недоступен'); }
+  }
+  function renderMenu() {
+    const box = $('levelList'); box.innerHTML = '';
+    LEVELS.forEach((lv, i) => {
+      const n = i + 1, b = document.createElement('button');
+      b.className = 'btn'; b.disabled = n > save.unlocked;
+      const best = save.best[String(n)];
+      b.innerHTML = (n > save.unlocked ? '🔒 ' : '') + 'Уровень ' + n + ' — ' + lv.name + '<small>' + lv.sub + (best ? ' · рекорд ' + fmt(best) : '') + '</small>';
+      b.onclick = () => startLevel(n);
+      box.appendChild(b);
+    });
+  }
+
+  /* ---------- ввод ---------- */
+  const GAME_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'];
+  window.addEventListener('keydown', e => {
+    if (GAME_KEYS.indexOf(e.code) >= 0) e.preventDefault();
+    held[e.code] = true;
+    if (e.repeat) return;
+    if (e.code === 'Escape' || e.code === 'KeyP') { if (G.state === 'play') pauseGame(); else if (G.state === 'pause') resumeGame(); return; }
+    if (e.code === 'KeyM') { setMuted(!save.muted); return; }
+    if (G.state !== 'play') return;
+    if (e.code === 'KeyE') toggleHide();
+    else if (e.code === 'KeyF') placeTrap();
+    else if (e.code === 'KeyG' || e.code === 'KeyQ') throwBottle();
+    else if (e.code === 'KeyC') { P.crouch = !P.crouch; }
+  });
+  window.addEventListener('keyup', e => { held[e.code] = false; });
+  window.addEventListener('blur', () => { for (const k in held) held[k] = false; pauseGame(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  // джойстик
+  const zone = $('joyZone'), jBase = $('joyBase'), jKnob = $('joyKnob');
+  zone.addEventListener('pointerdown', e => {
+    if (joy.id !== null) return;
+    joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY;
+    try { zone.setPointerCapture(e.pointerId); } catch (er) {}
+    const sr = $('stage').getBoundingClientRect(); jBase.style.left = (e.clientX - sr.left) + 'px'; jBase.style.top = (e.clientY - sr.top) + 'px'; jBase.classList.remove('hidden');
+    jKnob.style.transform = 'translate(0,0)'; e.preventDefault();
+  });
+  zone.addEventListener('pointermove', e => {
+    if (e.pointerId !== joy.id) return;
+    let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const m = Math.hypot(dx, dy), R = 50;
+    if (m > R) { dx = dx / m * R; dy = dy / m * R; }
+    jKnob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    let vx = dx / R, vy = dy / R; const vm = Math.hypot(vx, vy);
+    if (vm < 0.2) { vx = 0; vy = 0; }
+    joy.x = vx; joy.y = vy;
+  });
+  const endJoy = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; jBase.classList.add('hidden'); };
+  zone.addEventListener('pointerup', endJoy); zone.addEventListener('pointercancel', endJoy);
+
+  function bindBtn(id, down, up) {
+    const el = $(id);
+    el.addEventListener('pointerdown', e => { e.preventDefault(); el.classList.add('on'); if (down) down(); });
+    const rel = () => { el.classList.remove('on'); if (up) up(); };
+    el.addEventListener('pointerup', rel); el.addEventListener('pointercancel', rel); el.addEventListener('pointerleave', rel);
+  }
+  bindBtn('tbRun', () => { touchRun = true; }, () => { touchRun = false; });
+  bindBtn('tbAct', () => toggleHide());
+  bindBtn('tbTrap', () => placeTrap());
+  bindBtn('tbBot', () => throwBottle());
+  bindBtn('tbSneak', () => { if (G.state === 'play') { P.crouch = !P.crouch; $('tbSneak').style.background = P.crouch ? 'rgba(255,182,77,.55)' : ''; } });
+
+  // кнопки интерфейса
+  $('bPause').onclick = pauseGame;
+  $('bFull').onclick = toggleFS; $('mFull').onclick = toggleFS; $('pFull').onclick = toggleFS;
+  $('bSound').onclick = () => { initAudio(); setMuted(!save.muted); };
+  $('mSound').onclick = () => { initAudio(); setMuted(!save.muted); };
+  $('pResume').onclick = resumeGame;
+  $('pRestart').onclick = () => startLevel(G.level);
+  $('pMenu').onclick = goMenu;
+  $('eRetry').onclick = () => startLevel(G.level);
+  $('eMenu').onclick = goMenu;
+  setMuted(save.muted);
+
+  /* ---------- главный цикл ---------- */
+  function update(dt) {
+    G.t += dt;
+    updatePlayer(dt);
+    updateItems(dt);
+    updateProj(dt);
+    updateTraps();
+    updateNeighbor(dt);
+    if (G.state !== 'play') return;
+    ambientUpdate(dt);
+    checkExit();
+    updateVisuals(dt);
+    updateCamera(dt, false);
+    updateHud();
+  }
+  function menuCam(dt) {
+    G.menuAngle += dt * 0.12;
+    const cx = GW / 2, cz = GH / 2, r = Math.max(GW, GH) * 0.62;
+    camera.position.set(cx + Math.sin(G.menuAngle) * r, 17, cz + Math.cos(G.menuAngle) * r);
+    camera.lookAt(cx, 0, cz);
+    updateVisuals(dt);
+  }
+  let last = performance.now();
+  function loop(now) {
+    requestAnimationFrame(loop);
+    if (G.failed) return;
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+    try {
+      if (G.state === 'play') update(dt);
+      else if (G.state === 'menu') menuCam(dt);
+      renderer.render(scene, camera);
+    } catch (err) {
+      console.error(err); G.failed = true;
+      showError('Ошибка в игре: ' + err.message);
+    }
+  }
+
+  buildLevel(1); renderMenu(); showOverlay('menu');
+  requestAnimationFrame(loop);
+}
+})();
+</script>
+</body>
+</html>
